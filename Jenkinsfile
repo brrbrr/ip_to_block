@@ -14,14 +14,14 @@ pipeline {
         PROJ = "/bin:/usr/local/bin:/usr/bin"
         // Name of CSV file containing network list
         NLFILE = "list.csv"
+		NLFILEPY1 = "activateNetworkList.py"
+		NLFILEPY2 = "updateNetworkList.py"
         // Name of network list to update
         NLNAME = "bbcorp_IP_block"
         // Link to VCS project containing network list
         NLSCM = "https://github.com/brrbrr/ip_to_block.git"
         // Comma-seperated e-mail list
         NLEMAIL = "admin@bbcorp.com"
-        // Path to python project, if NL pipeline script are not in PATH
-        NLPATH = "/root/data"
     }
     parameters {
         choice(name: 'NETWORK', choices: ['staging', 'production'], description: 'The network to activate the network list.')
@@ -32,6 +32,8 @@ pipeline {
             steps {
                 git "${env.NLSCM}"
                 archiveArtifacts "${env.NLFILE}"
+				archiveArtifacts "${env.NLFILEPY1}"
+				archiveArtifacts "${env.NLFILEPY2}"
                 echo "${env.JOB_NAME} - Pulling updated network list from SCM. List Name: ${env.NLNAME}"
             }
         }
@@ -44,7 +46,7 @@ pipeline {
                         selector: [$class: 'SpecificBuildSelector', buildNumber: '${BUILD_NUMBER}']
                 ])
                 withEnv(["PATH+EXTRA=$PROJ"]) {
-                    sh 'python3 $NLPATH/updateNetworkList.py $NLNAME --file $NLFILE --action ${ACTION}'
+                    sh 'python3 $NLFILEPY2 $NLNAME --file $NLFILE --action ${ACTION}'
                 }
                 echo "${env.JOB_NAME} - Updating network list ${env.NLNAME}"
             }
@@ -53,7 +55,7 @@ pipeline {
             steps {
                 echo "${env.JOB_NAME} - Activating network list on ${env.NETWORK}"
                 withEnv(["PATH+EXTRA=$PROJ"]) {
-                    sh 'python3 $NLPATH/activateNetworkList.py $NLNAME --network ${NETWORK} --email $NLEMAIL'
+                    sh 'python3 $NLFILEPY1 $NLNAME --network ${NETWORK} --email $NLEMAIL'
                 }
                 echo "${env.JOB_NAME} - Network list activated!"
             }
